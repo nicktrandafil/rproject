@@ -190,6 +190,8 @@ if(${PROJECT_NAME}_BUILD_DOC)
     add_subdirectory(doc)
 endif()
 
+# Meta object code
+add_subdirectory(moc)
 
 # Testing
 if(${PROJECT_NAME}_TESTING)
