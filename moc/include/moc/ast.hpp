@@ -25,10 +25,14 @@
 #pragma once
 
 #include <yenxo/comparison_traits.hpp>
+#include <yenxo/define_enum.hpp>
 #include <yenxo/ostream_traits.hpp>
+
+#include <type_safe/strong_typedef.hpp>
 
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace yenxo::moc {
@@ -69,15 +73,130 @@ struct AttributeSpecifier {
     std::vector<Attribute> attribute_list;
 };
 
-struct Class : trait::EqualityComparison<Class> {
-    Class() = default;
-    Class(char const* name, bool struct_)
-            : name(name)
-            , struct_(struct_) {
+DEFINE_ENUM(ClassKey, class_, struct_, union_);
+DEFINE_ENUM(ClassVirtSpecifier, final_);
+DEFINE_ENUM(AccessSpecifier, public_, protected_, private_);
+
+struct Empty {
+    YENXO_EQUALITY_COMPARISON_OPERATORS(Empty)
+    YENXO_OSTREAM_OPERATOR(Empty)
+
+    static std::string_view typeName() noexcept {
+        return "Empty";
+    }
+};
+
+struct Identifier
+        : type_safe::strong_typedef<Identifier, std::string>
+        , type_safe::strong_typedef_op::equality_comparison<Identifier> {
+    using strong_typedef::strong_typedef;
+
+    inline friend std::ostream& operator<<(std::ostream& os, Identifier const& val) {
+        return os << static_cast<type_safe::underlying_type<Identifier>>(val);
+    }
+};
+
+struct NestedNameSpecifier {
+    YENXO_EQUALITY_COMPARISON_OPERATORS(NestedNameSpecifier)
+    YENXO_OSTREAM_OPERATOR(NestedNameSpecifier)
+
+    static std::string_view typeName() noexcept {
+        return "NestedNameSpecifier";
     }
 
-    std::string name;
-    bool struct_;
+    std::vector<Identifier> parcels;
+};
+
+struct ClassOrDecltype {
+    YENXO_EQUALITY_COMPARISON_OPERATORS(ClassOrDecltype)
+    YENXO_OSTREAM_OPERATOR(ClassOrDecltype)
+
+    static std::string_view typeName() noexcept {
+        return "ClassOrDecltype";
+    }
+
+    std::optional<NestedNameSpecifier> nested_name;
+    Identifier type_name;
+};
+
+struct Class {
+    YENXO_EQUALITY_COMPARISON_OPERATORS(Class)
+    YENXO_OSTREAM_OPERATOR(Class)
+
+    static std::string_view typeName() noexcept {
+        return "Class";
+    }
+
+    struct HeadName {
+        YENXO_EQUALITY_COMPARISON_OPERATORS(HeadName)
+        YENXO_OSTREAM_OPERATOR(HeadName)
+
+        static std::string_view typeName() noexcept {
+            return "HeadName";
+        }
+
+        std::optional<NestedNameSpecifier> nested_name;
+        Identifier class_name;
+    };
+
+    struct BaseSpecifier {
+        YENXO_EQUALITY_COMPARISON_OPERATORS(BaseSpecifier)
+        YENXO_OSTREAM_OPERATOR(BaseSpecifier)
+
+        static std::string_view typeName() noexcept {
+            return "BaseSpecifier";
+        }
+
+        std::vector<AttributeSpecifier> attributes;
+        bool virtual_{false};
+        std::optional<AccessSpecifier> access_specifier;
+        ClassOrDecltype class_or_decltype;
+    };
+
+    struct BaseClause {
+        YENXO_EQUALITY_COMPARISON_OPERATORS(BaseClause)
+        YENXO_OSTREAM_OPERATOR(BaseClause)
+
+        static std::string_view typeName() noexcept {
+            return "BaseClause";
+        }
+
+        std::vector<BaseSpecifier> base_specifiers;
+    };
+
+    struct Head {
+        YENXO_EQUALITY_COMPARISON_OPERATORS(Head)
+        YENXO_OSTREAM_OPERATOR(Head)
+
+        static std::string_view typeName() noexcept {
+            return "Head";
+        }
+
+        ClassKey class_key;
+        std::vector<AttributeSpecifier> attributes;
+        std::optional<HeadName> head_name;
+        std::optional<ClassVirtSpecifier> virt_specifier;
+        std::optional<BaseClause> base_clause;
+    };
+
+    struct MemberSpecification {
+        YENXO_EQUALITY_COMPARISON_OPERATORS(MemberSpecification)
+
+        static std::string_view typeName() noexcept {
+            return "MemberSpecification";
+        }
+
+        inline friend std::ostream& operator<<(std::ostream& os,
+                                               MemberSpecification const& val) {
+            return std::visit([&os](auto const& x) -> decltype(auto) { return os << x; },
+                              val.variants);
+        }
+
+        std::variant<Empty> variants;
+    };
+
+    Head head;
+    MemberSpecification member_specification;
 };
 
 struct File {
@@ -89,5 +208,21 @@ struct File {
 BOOST_HANA_ADAPT_STRUCT(yenxo::moc::Attribute, name, arguments);
 BOOST_HANA_ADAPT_STRUCT(yenxo::moc::Attribute::NameToken, scope, name);
 BOOST_HANA_ADAPT_STRUCT(yenxo::moc::AttributeSpecifier, using_, attribute_list);
-BOOST_HANA_ADAPT_STRUCT(yenxo::moc::Class, name, struct_);
-BOOST_HANA_ADAPT_STRUCT(yenxo::moc::File, classes);
+BOOST_HANA_ADAPT_STRUCT(yenxo::moc::Class::HeadName, nested_name, class_name);
+BOOST_HANA_ADAPT_STRUCT(yenxo::moc::Class::BaseSpecifier,
+                        attributes,
+                        virtual_,
+                        access_specifier,
+                        class_or_decltype);
+BOOST_HANA_ADAPT_STRUCT(yenxo::moc::Class::BaseClause, base_specifiers);
+BOOST_HANA_ADAPT_STRUCT(yenxo::moc::Class::Head,
+                        class_key,
+                        attributes,
+                        head_name,
+                        virt_specifier,
+                        base_clause);
+BOOST_HANA_ADAPT_STRUCT(yenxo::moc::Class::MemberSpecification, variants);
+BOOST_HANA_ADAPT_STRUCT(yenxo::moc::Class, head, member_specification);
+BOOST_HANA_ADAPT_STRUCT(yenxo::moc::NestedNameSpecifier, parcels);
+BOOST_HANA_ADAPT_STRUCT(yenxo::moc::Empty);
+BOOST_HANA_ADAPT_STRUCT(yenxo::moc::ClassOrDecltype, nested_name, type_name);

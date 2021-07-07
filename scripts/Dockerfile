@@ -68,4 +68,6 @@ RUN sed -i '/messagebus/d' /var/lib/dpkg/statoverride
 
 RUN echo "if [ -f /home/$USER/.bashrc ]; then . /home/$USER/.bashrc ; fi" >> /root/.bashrc
 
+RUN ln -s /bin/clang-format-11 /bin/clang-format
+
 CMD /bin/bash -l

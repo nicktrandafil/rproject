@@ -69,11 +69,13 @@ IncludeCategories:
     Priority:        3
   - Regex:           '^<rapidjson/'
     Priority:        4
-  - Regex:           '^<boost/'
+  - Regex:           '^<type_safe/'
     Priority:        5
+  - Regex:           '^<boost/'
+    Priority:        6
 # std
   - Regex:           '^<.+'
-    Priority:        6
+    Priority:        7
 IncludeIsMainRegex: '(Test)?$'
 IndentCaseLabels: false
 IndentPPDirectives: None
@@ -123,3 +125,4 @@ StatementMacros:
   - QT_REQUIRE_VERSION
 TabWidth:        8
 UseTab:          Never
+WhitespaceSensitiveMacros: ['BOOST_HANA_DEFINE_STRUCT', 'DEFINE_STRUCT']

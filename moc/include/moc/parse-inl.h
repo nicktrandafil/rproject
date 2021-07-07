@@ -22,10 +22,10 @@
   SOFTWARE.
 */
 
-#include <moc/ast.hpp>
-
 #include <boost/spirit/include/phoenix.hpp>
 #include <boost/spirit/include/qi.hpp>
+
+#include <moc/ast.hpp>
 
 namespace qi = boost::spirit::qi;
 namespace phx = boost::phoenix;
@@ -33,15 +33,30 @@ namespace phx = boost::phoenix;
 BOOST_FUSION_ADAPT_STRUCT(yenxo::moc::Attribute::NameToken, scope, name)
 BOOST_FUSION_ADAPT_STRUCT(yenxo::moc::Attribute, name, arguments)
 BOOST_FUSION_ADAPT_STRUCT(yenxo::moc::AttributeSpecifier, using_, attribute_list)
-BOOST_FUSION_ADAPT_STRUCT(yenxo::moc::Class, name, struct_)
+BOOST_FUSION_ADAPT_STRUCT(yenxo::moc::Class, head, member_specification)
+BOOST_FUSION_ADAPT_STRUCT(yenxo::moc::Class::Head,
+                          class_key,
+                          attributes,
+                          head_name,
+                          virt_specifier,
+                          base_clause)
+BOOST_FUSION_ADAPT_STRUCT(yenxo::moc::Class::HeadName, nested_name, class_name)
+BOOST_FUSION_ADAPT_STRUCT(yenxo::moc::Class::BaseClause, base_specifiers)
+BOOST_FUSION_ADAPT_STRUCT(yenxo::moc::Class::BaseSpecifier,
+                          attributes,
+                          virtual_,
+                          access_specifier,
+                          class_or_decltype)
+BOOST_FUSION_ADAPT_STRUCT(yenxo::moc::NestedNameSpecifier, parcels)
 BOOST_FUSION_ADAPT_STRUCT(yenxo::moc::File, classes)
+BOOST_FUSION_ADAPT_STRUCT(yenxo::moc::ClassOrDecltype, nested_name, type_name)
 
 // TODO Remove.
 namespace std {
 
 template <class T>
 std::ostream& operator<<(std::ostream& os, optional<T> const& x) {
-    return os << x;
+    return os << *x;
 }
 
 } // namespace std
@@ -55,6 +70,7 @@ struct Grammar : qi::grammar<It, File(), Skip> {
             : Grammar::base_type(file, "file") {
         using phx::at_c;
         using phx::begin;
+        using phx::construct;
         using phx::end;
         using phx::insert;
         using phx::push_back;
@@ -64,16 +80,6 @@ struct Grammar : qi::grammar<It, File(), Skip> {
         // clang-format off
         line_comment       = lit("//") >> no_skip[*(char_ - eol - eoi)] >> (eol | eoi);
         multi_line_comment = lit("/*") >> no_skip[*(char_ - lit("*/"))] >> lit("*/");
-
-        class_ =    (  lit("struct")[at_c<1>(_val) = val(true)]
-                     | lit("class")[at_c<1>(qi::_val) = val(false)]
-                    )
-                 >> no_skip[space]
-                 >> identifier[at_c<0>(_val) = _1]
-                 >> lit("{")
-                 >> lit("}")
-                             >> lit(";")
-        ;
 
         attribute_specifier       =    lit("[") >> lit("[")
                                     >> -attribute_using_prefix[at_c<0>(_val) = _1]
@@ -263,12 +269,44 @@ struct Grammar : qi::grammar<It, File(), Skip> {
                 string("and")|    string("or")|    string("xor")|    string("not")|   string("bitand")|   string("bitor")|    string("compl")|
                 string("and_eq")| string("or_eq")| string("xor_eq")| string("not_eq")
         ;
+
+        class_specifier            = class_head >> "{" >> class_member_specification >> "}";
+        class_member_specification = eps[_val = construct<Class::MemberSpecification>()];
+        class_head                 = class_key
+                                     >> *attribute_specifier
+                                     >> class_head_name
+                                     >> -class_virt_specifier
+                                     >> -class_base_clause
+        ;
+        class_key                  =   string("class")[_val = val(ClassKey::class_)]
+                                     | string("struct")[_val = val(ClassKey::struct_)]
+                                     | string("union")[_val = val(ClassKey::union_)]
+        ;
+        class_virt_specifier       = lit("final")[_val = val(ClassVirtSpecifier::final_)];
+        class_head_name            = -nested_name_specifier >> class_name;
+        class_name                 = identifier.alias();
+        nested_parcel              = identifier.alias();
+        type_name                  = identifier.alias();
+        nested_name_specifier      = hold["::"] || +(nested_parcel >> "::")[push_back(at_c<0>(_val), _1)];
+        class_base_clause		   = ":" >> (class_base_specifier % ",")[at_c<0>(_val) = _1];
+        class_base_specifier       =    (*attribute_specifier)[at_c<0>(_val) = _1]
+                                     >> -(
+                                            lit("virtual")  [at_c<1>(_val) = val(true)]
+                                          ^ access_specifier[at_c<2>(_val) = _1]
+                                         )
+                                     >> class_or_decltype[at_c<3>(_val) = _1]
+        ;
+        class_or_decltype          = -nested_name_specifier >> type_name;
+        access_specifier           =   string("public")   [_val = val(AccessSpecifier::public_)]
+                                     | string("protected")[_val = val(AccessSpecifier::protected_)]
+                                     | string("private")  [_val = val(AccessSpecifier::private_)]
+        ;
         // clang-format on
 
         line_comment.name("Line comment");
         multi_line_comment.name("Multi line comment");
         file.name("File");
-        class_.name("Class");
+        class_specifier.name("Class");
         attribute_specifier.name("attribute-specifier");
         attribute_using_prefix.name("attribute-using-prefix");
         attribute_namespace.name("attribute-namespace");
@@ -301,7 +339,21 @@ struct Grammar : qi::grammar<It, File(), Skip> {
     qi::rule<It, std::string(), Skip> line_comment;
     qi::rule<It, std::string(), Skip> multi_line_comment;
     qi::rule<It, File(), Skip> file;
-    qi::rule<It, Class(), Skip> class_;
+
+    qi::rule<It, Class(), Skip> class_specifier;
+    qi::rule<It, Class::Head(), Skip> class_head;
+    qi::rule<It, Class::MemberSpecification(), Skip> class_member_specification;
+    qi::rule<It, ClassKey(), Skip> class_key;
+    qi::rule<It, Class::HeadName(), Skip> class_head_name;
+    qi::rule<It, ClassVirtSpecifier(), Skip> class_virt_specifier;
+    qi::rule<It, Class::BaseClause(), Skip> class_base_clause;
+    qi::rule<It, Class::BaseSpecifier(), Skip> class_base_specifier;
+    qi::rule<It, ClassOrDecltype(), Skip> class_or_decltype;
+    qi::rule<It, Identifier(), Skip> class_name;
+    qi::rule<It, Identifier(), Skip> type_name;
+    qi::rule<It, Identifier(), Skip> nested_parcel;
+    qi::rule<It, NestedNameSpecifier(), Skip> nested_name_specifier;
+    qi::rule<It, AccessSpecifier(), Skip> access_specifier;
 
     qi::rule<It, AttributeSpecifier(), Skip> attribute_specifier;
     qi::rule<It, std::string(), Skip> attribute_using_prefix;
