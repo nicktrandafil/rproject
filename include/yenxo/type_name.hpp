@@ -47,7 +47,7 @@ namespace yenxo {
 /// * fundamental types;
 /// * any type compatible with either requirement: standard Container or MapContainer. The
 /// names are 'list' and 'map' respectively;
-/// * any enum defined via `DEFINE_ENUM`. Define,
+/// * any enum defined via `YENXO_DEFINE_ENUM`. Define,
 /// @snippet test/type_name.cpp sn_enum
 /// Test,
 /// @snippet test/type_name.cpp sn_enum_checks

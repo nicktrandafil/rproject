@@ -5,13 +5,13 @@
 
 using namespace yenxo;
 
-DEFINE_ENUM(MyEnum,
-            val0,
-            (val1),
-            (val2, 4),
-            (val3, , "string_repr"),
-            (val4, 9, "string_repr2"),
-            (val5, , "s5", "s6"));
+YENXO_DEFINE_ENUM(MyEnum,
+                  val0,
+                  (val1),
+                  (val2, 4),
+                  (val3, , "string_repr"),
+                  (val4, 9, "string_repr2"),
+                  (val5, , "s5", "s6"));
 
 int main() {
     // to string conversion

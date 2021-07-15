@@ -14,7 +14,7 @@ RUN apt-get -y update && apt-get -y install \
     \
     lcov \
     \
-    vim \
+    vim xclip \
     libboost-dev
 
 ARG BUILD_TYPE

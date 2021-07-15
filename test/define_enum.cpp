@@ -34,49 +34,49 @@ using namespace yenxo;
 
 namespace {
 
-DEFINE_ENUM(
+YENXO_DEFINE_ENUM(
         E1_1,
         (e1, , "e_1", "e_2", "e_3", "e_4", "e_5", "e_6", "e_7", "e_8", "e_9", "e_10"));
 
-DEFINE_ENUM(E1, e1);
+YENXO_DEFINE_ENUM(E1, e1);
 
-DEFINE_ENUM(E,
-            e1,
-            (e2),
-            (e3, ),
-            (e4, 10),
-            (e5, 11, "e55"),
-            (e6, , "e66"),
-            (e7, , ),
-            e8,
-            e9,
-            e10,
-            e11,
-            e12,
-            e13,
-            e14,
-            e15,
-            e16,
-            e17,
-            e18,
-            e19,
-            e20,
-            e21,
-            e22,
-            e23,
-            e24,
-            e25,
-            e26,
-            e27,
-            e28,
-            e29,
-            e30,
-            e31,
-            e32);
+YENXO_DEFINE_ENUM(E,
+                  e1,
+                  (e2),
+                  (e3, ),
+                  (e4, 10),
+                  (e5, 11, "e55"),
+                  (e6, , "e66"),
+                  (e7, , ),
+                  e8,
+                  e9,
+                  e10,
+                  e11,
+                  e12,
+                  e13,
+                  e14,
+                  e15,
+                  e16,
+                  e17,
+                  e18,
+                  e19,
+                  e20,
+                  e21,
+                  e22,
+                  e23,
+                  e24,
+                  e25,
+                  e26,
+                  e27,
+                  e28,
+                  e29,
+                  e30,
+                  e31,
+                  e32);
 
 } // namespace
 
-TEST_CASE("Check DEFINE_ENUM", "[define_enum]") {
+TEST_CASE("Check YENXO_DEFINE_ENUM", "[define_enum]") {
     REQUIRE(toString(E1_1::e1) == "e_1");
     REQUIRE(fromString<E1_1>("e_2") == E1_1::e1);
     REQUIRE(fromString<E1_1>("e_3") == E1_1::e1);

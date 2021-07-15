@@ -70,7 +70,7 @@ struct TypeNameImpl<Def3> {
 namespace {
 
 /// [sn_enum]
-DEFINE_ENUM(E1, e1, e2);
+YENXO_DEFINE_ENUM(E1, e1, e2);
 /// [sn_enum]
 
 } // namespace
